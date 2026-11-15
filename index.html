@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#FEF7FF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)">
+<title>Backgammon</title>
+<meta name="description" content="Backgammon and Narde against the computer or a friend on the same phone. Three difficulty levels. Works offline.">
+<meta name="author" content="Meyzenworks">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Backgammon">
+<style>
+  :root {
+    --md-primary: #6750A4; --md-on-primary: #FFFFFF;
+    --md-primary-container: #EADDFF; --md-on-primary-container: #21005D;
+    --md-secondary-container: #E8DEF8; --md-on-secondary-container: #1D192B;
+    --md-surface: #FEF7FF; --md-on-surface: #1D1B20; --md-on-surface-variant: #49454F;
+    --md-surface-container-low: #F7F2FA; --md-surface-container: #F3EDF7;
+    --md-surface-container-high: #ECE6F0; --md-surface-container-highest: #E6E0E9;
+    --md-outline: #79747E; --md-outline-variant: #CAC4D0; --md-scrim: rgba(0,0,0,.32);
+    --frame: #E6E0E9; --felt: #F7F2FA; --pt-a: #B9A5EC; --pt-b: #D7CFE3;
+    --p1: #6750A4; --p1-in: #7F67BE; --p1-edge: #4F378B;
+    --p2: #FFFBFE; --p2-in: #F1ECF4; --p2-edge: #938F99;
+    --hl: #7D5260; --hl-fill: #FFD8E4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --md-primary: #D0BCFF; --md-on-primary: #381E72;
+      --md-primary-container: #4F378B; --md-on-primary-container: #EADDFF;
+      --md-secondary-container: #4A4458; --md-on-secondary-container: #E8DEF8;
+      --md-surface: #141218; --md-on-surface: #E6E0E9; --md-on-surface-variant: #CAC4D0;
+      --md-surface-container-low: #1D1B20; --md-surface-container: #211F26;
+      --md-surface-container-high: #2B2930; --md-surface-container-highest: #36343B;
+      --md-outline: #938F99; --md-outline-variant: #49454F; --md-scrim: rgba(0,0,0,.55);
+      --frame: #2B2930; --felt: #1D1B20; --pt-a: #4F378B; --pt-b: #3B3644;
+      --p1: #B69DF8; --p1-in: #CBB8FA; --p1-edge: #8E74D6;
+      --p2: #F4EFF7; --p2-in: #E6E0E9; --p2-edge: #938F99;
+      --hl: #EFB8C8; --hl-fill: #633B48;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { font-family: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--md-surface); color: var(--md-on-surface); user-select: none; -webkit-user-select: none; }
+  .app { height: 100%; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; padding: 4px 12px 14px; }
+  svg.i { width: 24px; height: 24px; fill: currentColor; display: block; }
+  .topbar { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 4px; }
+  .topbar h1 { font-size: 22px; font-weight: 400; margin: 0; flex: 1; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; border: none; background: transparent; color: var(--md-on-surface-variant); cursor: pointer; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .status { display: flex; justify-content: space-between; align-items: flex-end; margin: 2px 6px 10px; }
+  .title2 { font-size: 16px; font-weight: 500; }
+  .sub { font-size: 13px; color: var(--md-on-surface-variant); margin-top: 2px; }
+  .stats { display: flex; gap: 18px; text-align: right; }
+  .stat .v { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; color: var(--md-on-surface-variant); letter-spacing: .5px; text-transform: uppercase; }
+
+  .board-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #board { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  .frame { fill: var(--frame); }
+  .felt { fill: var(--felt); }
+  .pa { fill: var(--pt-a); } .pb { fill: var(--pt-b); }
+  .hit { fill: transparent; cursor: pointer; }
+  .ck { transition: transform .28s cubic-bezier(.2,0,0,1); cursor: pointer; }
+  .ck .b { stroke-width: 2; }
+  .ck.p1 .b { fill: var(--p1); stroke: var(--p1-edge); } .ck.p1 .in { fill: none; stroke: var(--p1-in); stroke-width: 2; }
+  .ck.p2 .b { fill: var(--p2); stroke: var(--p2-edge); } .ck.p2 .in { fill: none; stroke: var(--p2-in); stroke-width: 2; }
+  .ck.sel .b { stroke: var(--hl); stroke-width: 7; }
+  .ck.can .b { stroke: var(--hl); stroke-width: 4; }
+  .cnt { font: 600 22px Roboto, system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .cnt.p1 { fill: #fff; } .cnt.p2 { fill: #1D1B20; }
+  .hlc { fill: var(--hl-fill); fill-opacity: .85; stroke: var(--hl); stroke-width: 4; stroke-dasharray: 7 5; pointer-events: none; }
+  .hlr { fill: var(--hl-fill); fill-opacity: .6; stroke: var(--hl); stroke-width: 4; stroke-dasharray: 7 5; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .ck { transition: none; } }
+
+  .controls { display: flex; align-items: center; gap: 12px; margin-top: 12px; min-height: 48px; padding: 0 4px; }
+  .dice { display: flex; gap: 6px; }
+  .die { width: 34px; height: 34px; border-radius: 9px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 5px; transition: opacity .2s; }
+  .die.s0 { background: var(--p1); } .die.s0 i { background: #fff; }
+  .die.s1 { background: var(--p2); box-shadow: inset 0 0 0 1.5px var(--p2-edge); } .die.s1 i { background: #1D1B20; }
+  .die i { width: 6px; height: 6px; border-radius: 50%; place-self: center; visibility: hidden; }
+  .die i.on { visibility: visible; }
+  .die.used { opacity: .3; }
+  .dice { min-width: 74px; height: 34px; position: relative; }
+  /* dice tumble in sideways from the right and settle in the corner */
+  @keyframes tumble {
+    0%   { transform: translateX(var(--from, 220px)) rotate(400deg); opacity: 0; }
+    12%  { opacity: 1; }
+    75%  { transform: translateX(-4px) rotate(-8deg); }
+    100% { transform: translateX(0) rotate(0); }
+  }
+  .die.rolling { animation: tumble .62s cubic-bezier(.2,.7,.25,1) both; }
+  @media (prefers-reduced-motion: reduce) { .die.rolling { animation: none; } }
+  .msg { flex: 1; font-size: 14px; color: var(--md-on-surface-variant); line-height: 18px; }
+  .btn { height: 40px; padding: 0 20px; border-radius: 20px; border: none; cursor: pointer; font: 500 14px inherit; font-family: inherit; letter-spacing: .1px; position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; }
+  .btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .btn.tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); padding: 0 16px 0 12px; }
+  .btn.filled { background: var(--md-primary); color: var(--md-on-primary); }
+  .btn.text { background: transparent; color: var(--md-primary); padding: 0 12px; }
+  .btn[hidden] { display: none; }
+  .btn:disabled { opacity: .38; cursor: default; }
+  .btn::after, .icon-btn::after { content: ""; position: absolute; inset: 0; background: currentColor; opacity: 0; transition: opacity .15s; pointer-events: none; }
+  .btn:not(:disabled):active::after, .icon-btn:active::after { opacity: .12; }
+  @media (hover: hover) { .btn:not(:disabled):hover::after, .icon-btn:hover::after { opacity: .08; } }
+
+  .scrim { position: fixed; inset: 0; background: var(--md-scrim); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 20; }
+  .scrim.open { display: flex; }
+  .dialog { width: 100%; max-width: 380px; background: var(--md-surface-container-high); border-radius: 28px; padding: 24px; max-height: 90vh; overflow: auto; }
+  .dialog h2 { font-size: 24px; font-weight: 400; margin: 0 0 16px; }
+  .dialog p, .dialog li { font-size: 14px; line-height: 20px; color: var(--md-on-surface-variant); }
+  .dialog ul { padding-left: 20px; margin: 0; }
+  .dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .opt { display: flex; align-items: center; gap: 14px; padding: 12px 8px; border-radius: 12px; cursor: pointer; }
+  .opt input { width: 20px; height: 20px; accent-color: var(--md-primary); margin: 0; }
+  .opt .t { font-size: 16px; } .opt .d { font-size: 13px; color: var(--md-on-surface-variant); }
+  .opt.disabled { opacity: .45; cursor: default; }
+  .seg { display: flex; border: 1px solid var(--md-outline); border-radius: 20px; overflow: hidden; margin: 2px 8px 8px 42px; }
+  .seg button { flex: 1; height: 36px; border: none; background: transparent; color: var(--md-on-surface); font: 500 13px inherit; font-family: inherit; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--md-outline); }
+  .seg button[aria-pressed="true"] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .result { text-align: center; font-size: 15px; color: var(--md-on-surface-variant); }
+  .bigscore { text-align: center; font-size: 34px; margin: 6px 0 2px; }
+  .snackbar { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--md-on-surface); color: var(--md-surface); max-width: 92vw; z-index: 30; padding: 14px 16px; border-radius: 4px; font-size: 14px; display: none; }
+  .snackbar.show { display: block; }
+  .dialog .credits { font-size: 12px; text-align: center; margin: 14px 0 0; }
+  .dialog .credits a { color: var(--md-primary); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1 id="gameName">Backgammon</h1>
+    <button class="icon-btn" id="newBtn" aria-label="New game"><svg class="i" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
+    <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg class="i" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg></button>
+  </header>
+  <div class="status">
+    <div><div class="title2" id="modeTitle">You vs Computer</div><div class="sub" id="scoreLine">Score 0 – 0</div></div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="pip0">167</div><div class="l" id="pipL0">Your pips</div></div>
+      <div class="stat"><div class="v" id="pip1">167</div><div class="l" id="pipL1">CPU pips</div></div>
+    </div>
+  </div>
+  <div class="board-wrap"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div class="controls">
+    <div class="dice" id="dice"></div>
+    <div class="msg" id="msg"></div>
+    <button class="btn tonal" id="undoBtn" hidden><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>Undo</button>
+    <button class="btn filled" id="mainBtn" hidden>Roll</button>
+  </div>
+</div>
+
+<div class="scrim" id="newScrim"><div class="dialog" role="dialog" aria-modal="true">
+  <h2>New game</h2>
+  <div class="seg" id="variantSeg" style="margin:0 0 12px"><button data-v="bg">Backgammon</button><button data-v="narde">Narde</button></div>
+  <p id="variantNote" style="margin:-4px 8px 10px">Classic rules with hitting.</p>
+  <label class="opt"><input type="radio" name="mode" value="cpu" checked><div><div class="t">You vs Computer</div><div class="d">You play the purple checkers</div></div></label>
+  <div class="seg" id="levelSeg"><button data-l="easy">Easy</button><button data-l="medium">Medium</button><button data-l="hard">Hard</button></div>
+  <label class="opt"><input type="radio" name="mode" value="local"><div><div class="t">Two players, this phone</div><div class="d">Take turns passing the phone</div></div></label>
+  <label class="opt disabled"><input type="radio" name="mode" value="online" disabled><div><div class="t">Two phones nearby</div><div class="d">Coming soon</div></div></label>
+  <div class="row"><button class="btn text" data-close>Cancel</button><button class="btn filled" id="startBtn">Start</button></div>
+</div></div>
+
+<div class="scrim" id="winScrim"><div class="dialog" role="dialog" aria-modal="true">
+  <h2 id="winTitle">You win!</h2>
+  <div class="result" id="winKind">Single game · 1 point</div>
+  <div class="bigscore" id="winScore">1 – 0</div>
+  <div class="result" id="winNames">You · Computer</div>
+  <div class="row"><button class="btn text" data-close>Close</button><button class="btn filled" id="againBtn">Next game</button></div>
+</div></div>
+
+<div class="scrim" id="helpScrim"><div class="dialog" role="dialog" aria-modal="true">
+  <h2>How to play</h2>
+  <ul>
+    <li>Move all 15 of your checkers into your home board (bottom right, or bottom left when the phone is upright), then bear them off. First to bear off all 15 wins.</li>
+    <li>Tap <b>Roll</b>. Each die is a separate move; doubles give four moves.</li>
+    <li>Tap one of your checkers, then a highlighted spot to move it there. You can tap a spot two dice away to use both dice on one checker.</li>
+    <li>You can't land on a point holding two or more opposing checkers. Landing on a single one (a blot) sends it to the bar; it must re-enter before anything else moves.</li>
+    <li>You must use both dice if you can (or the larger one if only one can be used).</li>
+    <li>When bearing off, double-tap a checker to take it straight off.</li>
+    <li>When your moves are used up the turn passes automatically after a moment. Tap <b>Undo</b> before then to take a move back.</li>
+    <li>Scoring: 1 point, 2 for a gammon (loser bore off none), 3 for a backgammon (loser also still has a checker on the bar or in the winner's home board).</li>
+  </ul>
+  <h2 style="font-size:18px;margin:18px 0 8px">Narde</h2>
+  <ul>
+    <li>All 15 checkers start on one point. Both stacks begin on your right-hand side and the players move towards each other, as in backgammon.</li>
+    <li>No hitting: you can’t land on any point with an opposing checker, even a single one.</li>
+    <li>Your first checker must travel all the way round into your home board before any other checker may move. If it can only use one of the dice, the other is skipped.</li>
+    <li>Until it has, doubles don’t count: roll again until you get a non-double.</li>
+    <li>Scoring: the winner scores the number of checkers they’re ahead by when they bear off their last one (15 minus the loser’s borne-off checkers). A Mars — the loser bore off none — is worth 15.</li>
+    <li>The first to 31 points wins the match.</li>
+  </ul>
+  <p class="credits">Backgammon 1.0 · by Meyzenworks · <a href="privacy.html">Privacy</a></p>
+  <div class="row"><button class="btn filled" data-close>Play</button></div>
+</div></div>
+
+<div class="snackbar" id="snackbar"></div>
+
+<script>
+(() => {
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
+  };
+  if (!store.get('bg.firstOpened', null)) store.set('bg.firstOpened', { date: new Date().toISOString(), version: '1.0.0' });
+
+  /* =========================================================
+     Rules engine. "View" = board from the side to move: their
+     checkers positive, moving from 24 down to 1; 25 = bar, 0 = off.
+     Real board: side 0 (purple) positive moving 24→1, side 1 negative.
+     ========================================================= */
+  const START = () => {
+    const pts = new Array(25).fill(0);
+    pts[24] = 2; pts[13] = 5; pts[8] = 3; pts[6] = 5;
+    pts[1] = -2; pts[12] = -5; pts[17] = -3; pts[19] = -5;
+    return { pts, bar: [0, 0], off: [0, 0] };
+  };
+  // 'bg' = backgammon; 'narde' = both stacks start on the right, players move towards each
+  // other, no hitting, and the first checker must cross before the others may move
+  let variant = 'bg';
+  const noHit = () => variant === 'narde';
+  const NARDE_START = () => { const pts = new Array(25).fill(0); pts[24] = 15; pts[1] = -15; return { pts, bar: [0, 0], off: [0, 0] }; };
+  const realPt = (s, v) => s === 0 ? v : 25 - v;
+  const oppIdx = v => 25 - v;   // my point v on the opponent's own track
+  // Narde: has my first checker made it all the way round into my home board yet?
+  const crossed = v => v.myOff > 0 || v.pts.some((n, i) => i >= 1 && i <= 6 && n > 0);
+  function toView(G, s) {
+    const pts = new Array(25).fill(0);
+    for (let v = 1; v <= 24; v++) { const r = G.pts[realPt(s, v)]; pts[v] = s === 0 ? r : -r; }
+    return { pts, myBar: G.bar[s], oppBar: G.bar[1 - s], myOff: G.off[s], oppOff: G.off[1 - s] };
+  }
+  function fromView(v, s) {
+    const G = { pts: new Array(25).fill(0), bar: [0, 0], off: [0, 0] };
+    for (let p = 1; p <= 24; p++) G.pts[realPt(s, p)] = s === 0 ? v.pts[p] : -v.pts[p];
+    G.bar[s] = v.myBar; G.bar[1 - s] = v.oppBar; G.off[s] = v.myOff; G.off[1 - s] = v.oppOff;
+    return G;
+  }
+  function singleMoves(v, d) {
+    const out = [], P = v.pts;
+    if (noHit()) {
+      let hi = 0; for (let p = 24; p >= 1; p--) if (P[p] > 0) { hi = p; break; }
+      const home = hi <= 6;
+      // Narde: until the first checker reaches the home board, it is the only one that may move
+      let only = null;
+      if (variant === 'narde' && !crossed(v)) { only = 24; for (let p = 23; p >= 1; p--) if (P[p] > 0) { only = p; break; } }
+      for (let p = hi; p >= 1; p--) {
+        if (P[p] <= 0 || (only !== null && p !== only)) continue;
+        const t = p - d;
+        if (t >= 1) {
+          if (P[t] < 0) continue;                                     // any opposing checker blocks
+          out.push({ f: p, t, d });
+        } else if (home && (t === 0 || p === hi)) out.push({ f: p, t: 0, d });
+      }
+      return out;
+    }
+    if (v.myBar > 0) { const t = 25 - d; if (P[t] >= -1) out.push({ f: 25, t, d }); return out; }
+    let hi = 0; for (let p = 24; p >= 1; p--) if (P[p] > 0) { hi = p; break; }
+    const home = hi <= 6;
+    for (let p = hi; p >= 1; p--) {
+      if (P[p] <= 0) continue;
+      const t = p - d;
+      if (t >= 1) { if (P[t] >= -1) out.push({ f: p, t, d }); }
+      else if (home && (t === 0 || p === hi)) out.push({ f: p, t: 0, d });
+    }
+    return out;
+  }
+  function applyV(v, m) {
+    const n = { pts: v.pts.slice(), myBar: v.myBar, oppBar: v.oppBar, myOff: v.myOff, oppOff: v.oppOff };
+    let hit = false;
+    if (m.f === 25) n.myBar--; else n.pts[m.f]--;
+    if (m.t === 0) n.myOff++;
+    else { if (n.pts[m.t] === -1) { n.pts[m.t] = 0; n.oppBar++; hit = true; } n.pts[m.t]++; }
+    return { v: n, hit };
+  }
+  const keyV = v => v.pts.join(',') + '|' + v.myBar + '|' + v.oppBar + '|' + v.myOff;
+  // All complete turns (distinct end positions), using as many dice as possible.
+  function generate(v0, dice) {
+    const res = [], seen = new Set();
+    (function rec(v, left, seq) {
+      const k = keyV(v) + '#' + left.join('');
+      if (seen.has(k)) return; seen.add(k);
+      let any = false; const tried = new Set();
+      for (let i = 0; i < left.length; i++) {
+        const d = left[i]; if (tried.has(d)) continue; tried.add(d);
+        const rest = left.slice(0, i).concat(left.slice(i + 1));
+        for (const m of singleMoves(v, d)) { any = true; const r = applyV(v, m); rec(r.v, rest, seq.concat([{ ...m, hit: r.hit }])); }
+      }
+      if (!any) res.push({ seq, v });
+    })(v0, dice.slice(), []);
+    const max = Math.max(0, ...res.map(r => r.seq.length));
+    let out = res.filter(r => r.seq.length === max);
+    if (max === 1 && dice.length === 2 && dice[0] !== dice[1]) {
+      const big = Math.max(...dice);
+      if (out.some(r => r.seq[0].d === big)) out = out.filter(r => r.seq[0].d === big);
+    }
+    return { seqs: out, max };
+  }
+  const maxUsable = (v, dice) => generate(v, dice).max;
+  // Moves allowed right now: they must keep the maximum number of dice usable.
+  function legalNext(v, left, turnDice) {
+    if (!left.length) return [];
+    const need = maxUsable(v, left);
+    if (!need) return [];
+    const out = [], tried = new Set();
+    for (let i = 0; i < left.length; i++) {
+      const d = left[i]; if (tried.has(d)) continue; tried.add(d);
+      const rest = left.slice(0, i).concat(left.slice(i + 1));
+      for (const m of singleMoves(v, d)) {
+        const r = applyV(v, m);
+        if (1 + maxUsable(r.v, rest) === need) out.push({ ...m, hit: r.hit });
+      }
+    }
+    // only one die playable in the whole turn: it must be the larger one if possible
+    if (need === 1 && left.length === 2 && turnDice.length === 2 && left[0] !== left[1]) {
+      const big = Math.max(...left);
+      if (out.some(m => m.d === big)) return out.filter(m => m.d === big);
+    }
+    return out;
+  }
+
+  // ---------- Computer player ----------
+  const PV = [0, .6, 1.2, 1.6, 2.0, 2.6, 2.6, 2.2, 1.6, 1.0, .8, .6, .5, .5, .5, .5, .6, .8, 1.0, 1.2, 1.8, 2.0, 1.6, 1.2, .8];
+  function shots(v, p) {          // opponent rolls (of 36) that hit my blot on p
+    const P = v.pts, src = [];
+    if (v.oppBar > 0) src.push(0);
+    for (let q = 1; q < p; q++) if (P[q] < 0) src.push(q);
+    if (!src.length) return 0;
+    const open = x => x >= 1 && x <= 24 && P[x] < 2;
+    let n = 0;
+    for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) {
+      let hit = false;
+      for (const q of src) {
+        const dist = p - q;
+        if (a === b) { for (let k = 1; k <= 4; k++) { const x = q + a * k; if (x > p) break; if (x === p) { hit = true; break; } if (!open(x)) break; } }
+        else if (dist === a || dist === b) hit = true;
+        else if (dist === a + b && (open(q + a) || open(q + b))) hit = true;
+        if (hit) break;
+      }
+      if (hit) n++;
+    }
+    return n;
+  }
+  // Tunable weights per level
+  const W = {
+    easy:   { pip: .10, risk: .5, prime: .6, hit: 3, homeHit: 1.0, point: .8, off: 1.5, stack: .5, noise: 12 },
+    medium: { pip: .12, risk: .85, prime: 1.2, hit: 3, homeHit: 1.2, point: 1.0, off: 1.5, stack: .5, noise: 5 },
+    hard:   { pip: .12, risk: .85, prime: 1.2, hit: 3, homeHit: 1.2, point: 1.0, off: 1.5, stack: .5, noise: 0 }
+  };
+  function evaluate(v, level) {
+    const w = W[level] || W.medium, P = v.pts;
+    let myPip = v.myBar * 25, opPip = v.oppBar * 25, myBack = v.myBar ? 25 : 0, opBack = v.oppBar ? 0 : 25;
+    for (let p = 1; p <= 24; p++) {
+      if (P[p] > 0) { myPip += p * P[p]; if (p > myBack) myBack = p; }
+      else if (P[p] < 0) { opPip += (25 - p) * -P[p]; if (p < opBack) opBack = p; }
+    }
+    if (myBack < opBack) {                        // pure race: pips, and don't pile checkers deep
+      let waste = 0; for (let p = 1; p <= 6; p++) if (P[p] > 2) waste += (P[p] - 2) * (7 - p) * .05;
+      return (opPip - myPip) + v.myOff * 2.5 - waste;
+    }
+    let s = (opPip - myPip) * w.pip + v.myOff * w.off;
+    let run = 0, best = 0, homeMade = 0;
+    for (let p = 1; p <= 24; p++) {
+      const n = P[p];
+      if (n >= 2) { s += PV[p] * w.point; run++; best = Math.max(best, run); if (p <= 6) homeMade++; if (n > 5) s -= (n - 5) * w.stack; }
+      else run = 0;
+      if (n === 1 && opBack < p) s -= shots(v, p) / 36 * ((25 - p) * .25 + 3) * w.risk;
+    }
+    if (best >= 3) s += (best - 2) * (best - 2) * w.prime;
+    s += v.oppBar * (w.hit + homeMade * w.homeHit) - v.myBar * 4;
+    return s;
+  }
+  function evaluateNarde(v, level) {
+    const P = v.pts, w = W[level] || W.medium;
+    let myPip = 0, opPip = 0;
+    const mineW = new Array(25).fill(0), oppAt = new Array(25).fill(0);
+    for (let p = 1; p <= 24; p++) {
+      if (P[p] > 0) { myPip += p * P[p]; mineW[oppIdx(p)] = P[p]; }
+      else if (P[p] < 0) { opPip += oppIdx(p) * -P[p]; oppAt[p] = -P[p]; }
+    }
+    let s = (opPip - myPip) + v.myOff * 2.5;
+    // walls in front of opposing checkers (on their track)
+    for (let x = 1; x <= 24; x++) if (P[x] < 0) {
+      let run = 0; for (let w2 = oppIdx(x) - 1; w2 >= 1 && mineW[w2]; w2--) run++;
+      s += Math.pow(Math.min(run, 6), 1.6) * .45 * -P[x] / 3;
+    }
+    // my checkers stuck behind their walls
+    for (let p = 1; p <= 24; p++) if (P[p] > 0) {
+      let run = 0; for (let q = p - 1; q >= 1 && P[q] < 0; q--) run++;
+      s -= Math.pow(Math.min(run, 5), 1.6) * .35 * P[p] / 3;
+    }
+    let spread = 0;
+    for (let p = 1; p <= 23; p++) if (P[p] > 0) { spread++; if (P[p] > 4) s -= (P[p] - 4) * .5; }
+    s += spread * .6 * (w.point || 1);
+    return s;
+  }
+  function chooseCpu(v, dice, level) {
+    const { seqs } = generate(v, dice);
+    const w = W[level] || W.medium;
+    // Narde scores run on a bigger scale (about 1 per pip), so mistakes are scaled to match
+    const nz = w.noise * (noHit() ? 3 : 1);
+    let scored = seqs.map(r => ({ r, s: (noHit() ? evaluateNarde(r.v, level) : evaluate(r.v, level)) + (nz ? (Math.random() - .5) * nz : 0) }));
+    let best = null, bs = -Infinity;
+    for (const x of scored) if (x.s > bs) { bs = x.s; best = x.r; }
+    return best ? best.seq : [];
+  }
+
+  /* =========================================================
+     Board drawing (SVG). Logical board 910×640; turned 90° on
+     tall screens so the checkers stay big enough to tap.
+     ========================================================= */
+  const R = 27, PW = 60, B = 20, BARX = B + 6 * PW, TRX = 820, TRW = 70, W0 = 910, H0 = 640, MID = 320, TOP = 20, BOT = 620;
+  const svg = document.getElementById('board');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const colX = p => p <= 6 ? BARX + PW + (6 - p) * PW + PW / 2 : p <= 12 ? B + (12 - p) * PW + PW / 2 : p <= 18 ? B + (p - 13) * PW + PW / 2 : BARX + PW + (p - 19) * PW + PW / 2;
+  let root, layerHL, layerCk, layerCnt, cntTimer;
+  const ckEl = [];
+  function buildBoard() {
+    root = el('g', {}, svg);
+    el('rect', { x: 0, y: 0, width: W0, height: H0, rx: 26, class: 'frame' }, root);
+    el('rect', { x: B, y: TOP, width: 6 * PW, height: BOT - TOP, rx: 8, class: 'felt' }, root);
+    el('rect', { x: BARX + PW, y: TOP, width: 6 * PW, height: BOT - TOP, rx: 8, class: 'felt' }, root);
+    el('rect', { x: TRX, y: TOP, width: TRW, height: BOT - TOP, rx: 10, class: 'felt' }, root);
+    for (let p = 1; p <= 24; p++) {
+      const x = colX(p), bottom = p <= 12;
+      const pts = bottom ? `${x - PW / 2 + 2},${BOT} ${x + PW / 2 - 2},${BOT} ${x},${BOT - 250}` : `${x - PW / 2 + 2},${TOP} ${x + PW / 2 - 2},${TOP} ${x},${TOP + 250}`;
+      el('polygon', { points: pts, class: p % 2 ? 'pa' : 'pb' }, root);
+    }
+    for (let p = 1; p <= 24; p++) {
+      const x = colX(p), bottom = p <= 12;
+      el('rect', { x: x - PW / 2, y: bottom ? MID : TOP, width: PW, height: bottom ? BOT - MID : MID - TOP, class: 'hit', 'data-loc': 'p' + p }, root);
+    }
+    el('rect', { x: BARX, y: TOP, width: PW, height: BOT - TOP, class: 'hit', 'data-loc': 'bar' }, root);
+    el('rect', { x: TRX, y: TOP, width: TRW, height: BOT - TOP, class: 'hit', 'data-loc': 'off' }, root);
+    layerHL = el('g', {}, root);
+    layerCk = el('g', {}, root);
+    layerCnt = el('g', {}, root);
+    for (let id = 0; id < 30; id++) {
+      const g = el('g', { class: 'ck ' + (id < 15 ? 'p1' : 'p2'), 'data-id': id }, layerCk);
+      el('circle', { r: R - 1, class: 'b' }, g);
+      el('circle', { r: R - 9, class: 'in' }, g);
+      ckEl.push(g);
+    }
+  }
+  let portrait = false;
+  function orient() {
+    const r = svg.parentElement.getBoundingClientRect();
+    portrait = r.height > r.width * 1.1;
+    if (portrait) { svg.setAttribute('viewBox', `0 0 ${H0} ${W0}`); root.setAttribute('transform', `translate(${H0},0) rotate(90)`); }
+    else { svg.setAttribute('viewBox', `0 0 ${W0} ${H0}`); root.removeAttribute('transform'); }
+    if (stacks) drawCounts();
+  }
+  new ResizeObserver(orient).observe(document.querySelector('.board-wrap'));
+
+  // Which checker sits where, so each one slides to its new place.
+  let stacks;
+  function buildStacks(G) {
+    stacks = { pts: Array.from({ length: 25 }, () => []), bar: [[], []], off: [[], []] };
+    const next = [0, 15];
+    for (let p = 1; p <= 24; p++) { const n = G.pts[p], s = n > 0 ? 0 : 1; for (let k = 0; k < Math.abs(n); k++) stacks.pts[p].push(next[s]++); }
+    for (let s = 0; s < 2; s++) { for (let k = 0; k < G.bar[s]; k++) stacks.bar[s].push(next[s]++); for (let k = 0; k < G.off[s]; k++) stacks.off[s].push(next[s]++); }
+  }
+  const cloneStacks = st => JSON.parse(JSON.stringify(st));
+  function stackFor(s, v) { return v === 25 ? stacks.bar[s] : v === 0 ? stacks.off[s] : stacks.pts[realPt(s, v)]; }
+  function moveVisual(s, m) {
+    if (!stackFor(s, m.f).length) { buildStacks(G); return; }      // safety: resync with the board
+    const id = stackFor(s, m.f).pop();
+    if (m.hit) { const opp = stacks.pts[realPt(s, m.t)].pop(); if (opp !== undefined) stacks.bar[1 - s].push(opp); }
+    stackFor(s, m.t).push(id);
+  }
+  function posOf(kind, key, i, n) {
+    if (kind === 'p') {
+      const sp = n > 5 ? Math.min(2 * R, (MID - TOP - 2 * R - 4) / (n - 1)) : 2 * R;
+      return [colX(key), key <= 12 ? BOT - R - i * sp : TOP + R + i * sp, 1];
+    }
+    if (kind === 'bar') {
+      const sp = n > 4 ? Math.min(2 * R, (MID - TOP - 2 * R - 16) / (n - 1)) : 2 * R;
+      return [BARX + PW / 2, key === 0 ? MID - R - 8 - i * sp : MID + R + 8 + i * sp, 1];
+    }
+    return [TRX + TRW / 2, key === 0 ? BOT - 12 - i * 18 : TOP + 12 + i * 18, .32];
+  }
+  function layout() {
+    const order = [], moving = [];
+    const put = (id, x, y, sc) => {
+      const e = ckEl[id], tr = `translate(${x}px, ${y}px) scale(1, ${sc})`;
+      if (e._tr !== tr) { moving.push(e); e._tr = tr; e.style.transform = tr; } else order.push(e);
+    };
+    for (let p = 1; p <= 24; p++) stacks.pts[p].forEach((id, i, a) => put(id, ...posOf('p', p, i, a.length)));
+    for (let s = 0; s < 2; s++) {
+      stacks.bar[s].forEach((id, i, a) => put(id, ...posOf('bar', s, i, a.length)));
+      stacks.off[s].forEach((id, i, a) => put(id, ...posOf('off', s, i, a.length)));
+    }
+    // keep the moving checker on top while it travels
+    const first = moving.find(e => e.parentNode === layerCk);
+    if (first) order.forEach(e => layerCk.insertBefore(e, first));
+    clearTimeout(cntTimer); layerCnt.innerHTML = '';
+    cntTimer = setTimeout(drawCounts, moving.length ? 300 : 0);
+  }
+  // A small number on any stack taller than five, so big piles are easy to count.
+  function drawCounts() {
+    // once movement has finished, restore the natural stacking order of every pile
+    for (let p = 1; p <= 24; p++) stacks.pts[p].forEach(id => layerCk.appendChild(ckEl[id]));
+    for (let s2 = 0; s2 < 2; s2++) { stacks.bar[s2].forEach(id => layerCk.appendChild(ckEl[id])); stacks.off[s2].forEach(id => layerCk.appendChild(ckEl[id])); }
+    layerCnt.innerHTML = '';
+    const label = (ids, pos) => {
+      if (ids.length <= 5) return;
+      const top = ids[ids.length - 1], [x, y] = pos;
+      const t = el('text', { x, y, class: 'cnt ' + (top < 15 ? 'p1' : 'p2') }, layerCnt);
+      if (portrait) t.setAttribute('transform', `rotate(-90 ${x} ${y})`);
+      t.textContent = ids.length;
+    };
+    for (let p = 1; p <= 24; p++) { const a = stacks.pts[p]; if (a.length) label(a, posOf('p', p, a.length - 1, a.length)); }
+    for (let s2 = 0; s2 < 2; s2++) { const a = stacks.bar[s2]; if (a.length) label(a, posOf('bar', s2, a.length - 1, a.length)); }
+  }
+  function locOfId(id) {
+    for (let p = 1; p <= 24; p++) if (stacks.pts[p].includes(id)) return 'p' + p;
+    if (stacks.bar[0].includes(id) || stacks.bar[1].includes(id)) return 'bar';
+    return 'off';
+  }
+
+  /* =========================================================
+     Game flow
+     ========================================================= */
+  let mode = Object.assign({ type: 'cpu', level: 'medium', variant: 'bg' }, store.get('bg.mode', {}));
+  if (mode.variant === 'long') mode.variant = 'narde';
+  variant = mode.variant;
+  let firstTurn = [true, true], matchOver = false;
+  const MATCH = 31;
+  let score = store.get('bg.score', [0, 0]);
+  let G, turn, phase, dice = [], left = [], partial = [], hist = [], sel = null, targets = new Map(), busy = false;
+  const human = s => mode.type === 'local' || s === 0;
+  const name = s => mode.type === 'local' ? (s === 0 ? 'Purple' : 'White') : (s === 0 ? 'You' : 'Computer');
+  const roll = () => 1 + Math.floor(Math.random() * 6);
+  const diceFor = (a, b) => a === b ? [a, a, a, a] : [a, b];
+  // The board as the side to move sees it, including Narde's head-rule counters for this turn.
+  function curView() {
+    const v = toView(G, turn);
+    return v;
+  }
+
+  function save() {
+    if (busy) return;
+    store.set('bg.game2', { G, turn, phase, dice, left, partial, firstTurn, start: hist.length ? hist[0] : null });
+    store.set('bg.mode', mode); store.set('bg.score', score);
+  }
+
+  function newGame() {
+    variant = mode.variant || 'bg';
+    G = variant === 'narde' ? NARDE_START() : START(); buildStacks(G); layout();
+    partial = []; hist = []; sel = null; dice = []; left = []; firstTurn = [true, true];
+    let a, b; do { a = roll(); b = roll(); } while (a === b);
+    turn = a > b ? 0 : 1;
+    const first = mode.type === 'cpu' ? (turn === 0 ? 'You start' : 'The computer starts') : `${name(turn)} starts`;
+    snack(mode.type === 'cpu' ? `You rolled ${a}, the computer ${b}. ${first}.` : `Purple rolled ${a}, White ${b}. ${first}.`);
+    if (variant !== 'bg') {
+      // in Narde the starter rolls again for the first move
+      if (human(turn)) { phase = 'roll'; refresh(); save(); }
+      else { phase = 'cpu'; refresh(); setTimeout(() => startTurn(diceFor(roll(), roll()), true), 900); }
+    } else startTurn(turn === 0 ? [a, b] : [b, a], true);
+  }
+
+  function startTurn(d, animate) {
+    dice = d.length === 2 && d[0] === d[1] ? [d[0], d[0], d[0], d[0]] : d.slice();
+    left = dice.slice(); partial = []; hist = []; sel = null;
+    const go = () => {
+      // Narde: doubles don't count until the first checker has crossed — roll again
+      if (variant === 'narde' && dice.length === 4 && !crossed(toView(G, turn))) {
+        snack(human(turn) ? `Double ${dice[0]}s — doubles don't count until ${mode.type === 'cpu' ? 'your' : name(turn) + "'s"} first checker reaches home. Roll again.` : `The computer rolled double ${dice[0]}s — rolling again.`);
+        dice = []; left = [];
+        if (human(turn)) { phase = 'roll'; refresh(); save(); }
+        else { phase = 'cpu'; refresh(); setTimeout(() => startTurn(diceFor(roll(), roll()), true), 1100); }
+        return;
+      }
+      if (human(turn)) {
+        phase = 'move';
+        hist.push({ G: JSON.parse(JSON.stringify(G)), stacks: cloneStacks(stacks), left: left.slice(), partial: [] });
+        if (!legalNext(curView(), left, dice).length) { finishTurn(1600); }
+        refresh(); save();
+      } else cpuTurn();
+    };
+    if (animate) { phase = human(turn) ? 'move' : 'cpu'; rollDice(go); } else go();
+  }
+
+  // Show "Turn complete" briefly, then hand over automatically (Undo cancels it).
+  let doneTimer = null;
+  function finishTurn(ms) {
+    phase = 'done'; refresh(); save();
+    clearTimeout(doneTimer);
+    doneTimer = setTimeout(() => { doneTimer = null; if (phase === 'done') nextTurn(); }, ms);
+  }
+  function nextTurn() {
+    clearTimeout(doneTimer); doneTimer = null;
+    firstTurn[turn] = false;
+    turn = 1 - turn; dice = []; left = []; partial = []; hist = []; sel = null;
+    if (human(turn)) { phase = 'roll'; refresh(); save(); }
+    else { phase = 'cpu'; refresh(); save(); setTimeout(() => startTurn(diceFor(roll(), roll()), true), 350); }
+  }
+
+  function cpuTurn() {
+    phase = 'cpu'; busy = true; refresh();
+    const seq = chooseCpu(curView(), dice, mode.level || 'medium');
+    if (!seq.length) snack('The computer has no legal moves');
+    let i = 0;
+    const step = () => {
+      if (i >= seq.length) { busy = false; if (!checkWin()) nextTurn(); return; }
+      const m = seq[i++];
+      doMove(m);
+      setTimeout(step, 520);
+    };
+    setTimeout(step, 700);
+  }
+
+  function doMove(m) {
+    const v = curView(), r = applyV(v, m);
+    m = { ...m, hit: r.hit };
+    G = fromView(r.v, turn);
+    moveVisual(turn, m);
+    const k = left.indexOf(m.d); if (k >= 0) left.splice(k, 1);
+    partial.push(m);
+    layout(); refresh();
+  }
+
+  function humanMove(path) {
+    for (const m of path) {
+      hist.push({ G: JSON.parse(JSON.stringify(G)), stacks: cloneStacks(stacks), left: left.slice(), partial: partial.slice() });
+      doMove(m);
+    }
+    sel = null;
+    if (checkWin()) return;
+    if (!legalNext(curView(), left, dice).length) { finishTurn(1000); return; }
+    refresh(); save();
+  }
+
+  function checkWin() {
+    for (let s = 0; s < 2; s++) if (G.off[s] === 15) {
+      const o = 1 - s;
+      let pts = 1, kind = 'Single game';
+      if (noHit()) {
+        // Narde: the winner scores the checkers they're ahead by; a Mars (loser bore off none) is 15
+        pts = 15 - G.off[o];
+        kind = G.off[o] === 0 ? 'Mars' : `${G.off[o]} borne off by ${mode.type === 'cpu' ? (o === 0 ? 'you' : 'the computer') : name(o)}`;
+      }
+      else if (G.off[o] === 0) {
+        pts = 2; kind = 'Gammon';
+        const home = s === 0 ? [1, 6] : [19, 24];
+        let inHome = false; for (let p = home[0]; p <= home[1]; p++) if (o === 0 ? G.pts[p] > 0 : G.pts[p] < 0) inHome = true;
+        if (G.bar[o] > 0 || inHome) { pts = 3; kind = 'Backgammon'; }
+      }
+      score[s] += pts; phase = 'over'; busy = false;
+      const matchWon = noHit() && score[s] >= MATCH;
+      store.set('bg.score', score); store.set('bg.game2', null);
+      refresh();
+      setTimeout(() => {
+        const who = mode.type === 'cpu' ? (s === 0 ? 'You win' : 'The computer wins') : `${name(s)} wins`;
+        document.getElementById('winTitle').textContent = matchWon ? `${who} the match!` : `${who}!`;
+        document.getElementById('againBtn').textContent = matchWon ? 'New match' : 'Next game';
+        if (matchWon) { matchOver = true; }
+        document.getElementById('winKind').textContent = `${kind} · ${pts} point${pts > 1 ? 's' : ''}`;
+        document.getElementById('winScore').textContent = `${score[0]} – ${score[1]}`;
+        document.getElementById('winNames').textContent = `${name(0)} · ${name(1)}`;
+        open('winScrim');
+      }, 500);
+      return true;
+    }
+    return false;
+  }
+
+  // ---------- Taps ----------
+  function pathsFrom(fromV) {
+    // every spot this checker can reach using one or more dice in a row
+    const res = new Map();
+    (function walk(v, lft, at, path) {
+      for (const m of legalNext(v, lft, dice)) {
+        if (m.f !== at) continue;
+        const p2 = path.concat([m]);
+        if (!res.has(m.t) || res.get(m.t).length > p2.length) res.set(m.t, p2);
+        if (m.t !== 0) {
+          const k = lft.indexOf(m.d), rest = lft.slice(0, k).concat(lft.slice(k + 1));
+          walk(applyV(v, m).v, rest, m.t, p2);
+        }
+      }
+    })(curView(), left.slice(), fromV, []);
+    return res;
+  }
+  function locToView(loc) { if (loc === 'bar') return 25; if (loc === 'off') return 0; const p = +loc.slice(1); return turn === 0 ? p : 25 - p; }
+
+  let lastTap = { t: 0, v: null };
+  svg.addEventListener('click', e => {
+    if (phase !== 'move' || busy || !human(turn)) return;
+    const ck = e.target.closest('.ck'), hitEl = e.target.closest('[data-loc]');
+    const loc = ck ? locOfId(+ck.dataset.id) : hitEl ? hitEl.dataset.loc : null;
+    if (!loc) { sel = null; refresh(); return; }
+    const v = locToView(loc);
+    // double-tap a checker to bear it off directly
+    const now = performance.now();
+    if (ck && sel === v && lastTap.v === v && now - lastTap.t < 450 && targets.has(0)) {
+      lastTap = { t: 0, v: null }; humanMove(targets.get(0)); return;
+    }
+    lastTap = { t: now, v };
+    if (sel !== null && targets.has(v)) { humanMove(targets.get(v)); return; }
+    const sources = new Set(legalNext(curView(), left, dice).map(m => m.f));
+    if (sources.has(v) && sel !== v) { sel = v; targets = pathsFrom(v); }
+    else { sel = null; targets = new Map(); }
+    refresh();
+  });
+
+  // ---------- UI ----------
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  let rolling = false;
+  function dieHTML(d) { return Array.from({ length: 9 }, (_, k) => `<i class="${PIPS[d].includes(k) ? 'on' : ''}"></i>`).join(''); }
+  // Two dice tumble across from the right, showing random faces, then land on the roll.
+  function rollDice(done) {
+    const box = document.getElementById('dice');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { renderDice(); done(); return; }
+    rolling = true; busy = true; refresh();
+    box.innerHTML = '';
+    const travel = Math.max(160, document.querySelector('.controls').clientWidth - 90);
+    const faces = [dice[0], dice.length === 4 ? dice[0] : dice[1]];
+    const els = faces.map((f, k) => {
+      const n = document.createElement('div');
+      n.className = `die s${turn} rolling`;
+      n.style.setProperty('--from', (travel + k * 30) + 'px');
+      n.style.animationDelay = (k * 70) + 'ms';
+      n.innerHTML = dieHTML(1 + Math.floor(Math.random() * 6));
+      box.appendChild(n); return n;
+    });
+    const spin = setInterval(() => els.forEach(n => { n.innerHTML = dieHTML(1 + Math.floor(Math.random() * 6)); }), 80);
+    setTimeout(() => {
+      clearInterval(spin);
+      els.forEach((n, k) => { n.innerHTML = dieHTML(faces[k]); });
+      setTimeout(() => { rolling = false; busy = false; renderDice(); done(); }, 160);
+    }, 560);
+  }
+  function renderDice() {
+    if (rolling) return;
+    const box = document.getElementById('dice'); box.innerHTML = '';
+    const used = dice.map(() => false), rem = left.slice();
+    dice.forEach((d, i) => { const k = rem.indexOf(d); if (k >= 0) rem.splice(k, 1); else used[i] = true; });
+    const show = dice.length === 4 ? dice : dice;
+    show.forEach((d, i) => {
+      const n = document.createElement('div');
+      n.className = `die s${turn}` + (used[i] ? ' used' : '');
+      n.innerHTML = dieHTML(d);
+      box.appendChild(n);
+    });
+  }
+  function pipCount(s) {
+    const v = toView(G, s); let n = v.myBar * 25;
+    for (let p = 1; p <= 24; p++) if (v.pts[p] > 0) n += p * v.pts[p];
+    return n;
+  }
+  function drawHighlights() {
+    layerHL.innerHTML = '';
+    ckEl.forEach(e => e.classList.remove('sel', 'can'));
+    if (phase !== 'move' || !human(turn) || busy) return;
+    const moves = legalNext(curView(), left, dice);
+    for (const f of new Set(moves.map(m => m.f))) {
+      const st = stackFor(turn, f); if (st.length) ckEl[st[st.length - 1]].classList.add(sel === f ? 'sel' : 'can');
+    }
+    if (sel === null) return;
+    for (const t of targets.keys()) {
+      if (t === 0) { el('rect', { x: TRX + 3, y: turn === 0 ? MID : TOP + 3, width: TRW - 6, height: MID - TOP - 3, rx: 10, class: 'hlr' }, layerHL); continue; }
+      const p = realPt(turn, t), st = stacks.pts[p];
+      const [x, y] = posOf('p', p, st.length && Math.sign(G.pts[p]) !== (turn === 0 ? 1 : -1) ? 0 : st.length, st.length + 1);
+      el('circle', { cx: x, cy: y, r: R - 3, class: 'hlc' }, layerHL);
+    }
+  }
+  function refresh() {
+    renderDice();
+    drawHighlights();
+    document.getElementById('gameName').textContent = variant === 'narde' ? 'Narde' : 'Backgammon';
+    document.getElementById('modeTitle').textContent = mode.type === 'cpu' ? `You vs Computer · ${({ easy: 'Easy', medium: 'Medium', hard: 'Hard' })[mode.level]}` : 'Two players';
+    document.getElementById('scoreLine').textContent = `Score ${score[0]} – ${score[1]}` + (noHit() ? ` · first to ${MATCH}` : '') + (mode.type === 'local' ? ' (Purple – White)' : '');
+    document.getElementById('pip0').textContent = pipCount(0);
+    document.getElementById('pip1').textContent = pipCount(1);
+    document.getElementById('pipL0').textContent = mode.type === 'cpu' ? 'Your pips' : 'Purple pips';
+    document.getElementById('pipL1').textContent = mode.type === 'cpu' ? 'CPU pips' : 'White pips';
+    const main = document.getElementById('mainBtn'), undo = document.getElementById('undoBtn'), msg = document.getElementById('msg');
+    main.hidden = true; undo.hidden = true;
+    if (rolling) { msg.textContent = ''; return; }
+    const who = mode.type === 'cpu' ? 'Your' : name(turn) + "'s";
+    if (phase === 'roll') { main.hidden = false; main.textContent = mode.type === 'local' ? `Roll · ${name(turn)}` : 'Roll'; msg.textContent = `${who} turn`; }
+    else if (phase === 'move') { undo.hidden = false; undo.disabled = hist.length <= 1; msg.textContent = sel === null ? 'Tap a checker to move' : 'Tap a highlighted spot'; }
+    else if (phase === 'done') { undo.hidden = !partial.length; undo.disabled = hist.length <= 1; msg.textContent = partial.length ? 'Turn complete' : 'No legal moves — passing'; }
+    else if (phase === 'cpu') msg.textContent = 'Computer is playing…';
+    else if (phase === 'over') { main.hidden = false; main.textContent = matchOver ? 'New match' : 'Next game'; msg.textContent = matchOver ? 'Match over' : 'Game over'; }
+  }
+
+  document.getElementById('mainBtn').addEventListener('click', () => {
+    if (phase === 'roll') startTurn(diceFor(roll(), roll()), true);
+    else if (phase === 'over') { if (matchOver) { score = [0, 0]; matchOver = false; } newGame(); }
+  });
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    if (hist.length <= 1 || busy) return;
+    clearTimeout(doneTimer); doneTimer = null;
+    const h = hist.pop();
+    G = h.G; stacks = h.stacks; left = h.left; partial = h.partial; sel = null; phase = 'move';
+    layout(); refresh(); save();
+  });
+
+  // dialogs
+  const open = id => document.getElementById(id).classList.add('open');
+  const closeAll = () => document.querySelectorAll('.scrim.open').forEach(s => s.classList.remove('open'));
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeAll));
+  document.querySelectorAll('.scrim').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
+  let pickLevel = mode.level || 'medium', pickVariant = mode.variant || 'bg';
+  const VNOTE = {
+    bg: 'Classic rules with hitting.',
+    narde: 'Both stacks start on your right and you move towards each other. No hitting — even a single checker blocks a point. Your first checker must reach your home board before any others move. Matches go to 31.'
+  };
+  function syncVariant() {
+    document.querySelectorAll('#variantSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === pickVariant));
+    document.getElementById('variantNote').textContent = VNOTE[pickVariant];
+  }
+  document.getElementById('variantSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; pickVariant = b.dataset.v; syncVariant(); });
+  function syncSeg() { document.querySelectorAll('#levelSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.l === pickLevel)); }
+  document.getElementById('levelSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; pickLevel = b.dataset.l; document.querySelector('input[value=cpu]').checked = true; syncSeg(); });
+  document.getElementById('newBtn').addEventListener('click', () => { pickLevel = mode.level || 'medium'; pickVariant = mode.variant || 'bg'; syncSeg(); syncVariant(); document.querySelector(`input[value=${mode.type}]`).checked = true; open('newScrim'); });
+  document.getElementById('startBtn').addEventListener('click', () => {
+    const t = document.querySelector('input[name=mode]:checked').value;
+    const nm = { type: t, level: pickLevel, variant: pickVariant };
+    if (nm.type !== mode.type || nm.variant !== mode.variant || (nm.type === 'cpu' && nm.level !== mode.level)) score = [0, 0];
+    mode = nm; closeAll(); newGame();
+  });
+  document.getElementById('againBtn').addEventListener('click', () => { closeAll(); if (matchOver) { score = [0, 0]; matchOver = false; } newGame(); });
+  document.getElementById('helpBtn').addEventListener('click', () => open('helpScrim'));
+  const snackEl = document.getElementById('snackbar'); let snackT;
+  function snack(m) { snackEl.textContent = m; snackEl.classList.add('show'); clearTimeout(snackT); snackT = setTimeout(() => snackEl.classList.remove('show'), 2800); }
+
+  // ---------- Start ----------
+  buildBoard(); orient();
+  const saved = store.get('bg.game2', null);
+  if (saved && saved.G) {
+    G = saved.G; turn = saved.turn; dice = saved.dice || []; left = saved.left || [];
+    partial = saved.partial || []; firstTurn = saved.firstTurn || [false, false]; buildStacks(G);
+    phase = saved.phase;
+    if (phase === 'cpu') { layout(); refresh(); setTimeout(() => startTurn(dice.length ? dice : diceFor(roll(), roll())), 400); }
+    else if ((phase === 'move' || phase === 'done') && saved.start) {
+      // a turn in progress resumes from its beginning
+      G = saved.start.G; buildStacks(G); layout();
+      startTurn(dice);
+    } else { layout(); refresh(); }
+  } else newGame();
+  if (!store.get('bg.seenHelp', false)) { open('helpScrim'); store.set('bg.seenHelp', true); }
+
+  window.__bg = { get G() { return G; }, get phase() { return phase; }, get turn() { return turn; }, get left() { return left; },
+    generate, legalNext, toView, startTurn, setVariant: v => { variant = v; }, evaluateNarde, applyV, fromView, chooseCpu, evaluate, W, humanMove, pathsFrom, newGame, setMode: m => { mode = m; }, setG: g => { G = g; buildStacks(G); layout(); }, setScore: x => { score = x; refresh(); } };
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
